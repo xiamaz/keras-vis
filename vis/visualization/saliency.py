@@ -86,9 +86,14 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
     for i in utils.listify(input_indices):
         if i < len(opt_result):
             _, grads, _ = opt_result[i]
-            grads = np.max(grads, axis=channel_idx)
-            grads = utils.normalize(grads)[0]
-            saliency_maps.append(grads)
+            #support for 1D input
+            if len(grads.shape) == 2:
+                grads = utils.normalize(grads)[0]
+                saliency_maps.append(grads)
+            else:
+                grads = np.max(grads, axis=channel_idx)
+                grads = utils.normalize(grads)[0]
+                saliency_maps.append(grads)
         else:
             raise ValueError('# TODO')
 
