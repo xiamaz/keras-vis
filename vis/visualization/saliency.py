@@ -48,7 +48,7 @@ def _find_penultimate_layer(model, layer_idx, penultimate_layer_idx):
 
 
 def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=None,
-                                   grad_modifier='absolute', input_indices=0):
+                                   grad_modifier='absolute', input_indices=0, maximization=True):
     """Generates an attention heatmap over the `seed_input` by using positive gradients of `input_tensor`
     with respect to weighted `losses`.
 
@@ -73,6 +73,9 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
         input_indices: A index or a list of index.
             This is the index of visualize target within `wrt_tensor`,
             but when `wrt_tensor` is None, it's `input_tensor`. (Default value = 0)
+        maximization: boolean
+            By default enabled. If maximation is disabled the gradients for all channels of the input
+            image are returned.
     Returns:
         The normalized gradients of `seed_input` with respect to weighted `losses`.
         When `input_indices` is a number, returned a gradients.
@@ -91,8 +94,11 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
                 grads = utils.normalize(grads)[0]
                 saliency_maps.append(grads)
             else:
-                grads = np.max(grads, axis=channel_idx)
-                grads = utils.normalize(grads)[0]
+                if maximization:
+                    grads = np.max(grads, axis=channel_idx)
+                    grads = utils.normalize(grads)[0]
+                else:
+                    grads = utils.normalize(grads)[0]
                 saliency_maps.append(grads)
         else:
             raise ValueError('# TODO')
@@ -100,11 +106,12 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
     if isinstance(input_indices, list):
         return saliency_maps
     else:
+        #TODO add support for disabled maximization
         return saliency_maps[input_indices]
 
 
 def visualize_saliency(model, layer_idx, filter_indices, seed_input, wrt_tensor=None,
-                       backprop_modifier=None, grad_modifier='absolute', input_indices=0):
+                       backprop_modifier=None, grad_modifier='absolute', input_indices=0, maximization = True):
     """Generates an attention heatmap over the `seed_input` for maximizing `filter_indices`
     output in the given `layer_idx`.
 
@@ -129,6 +136,9 @@ def visualize_saliency(model, layer_idx, filter_indices, seed_input, wrt_tensor=
         input_indices: A index or a list of index.
             This is the index of visualize target within `wrt_tensor`,
             but when `wrt_tensor` is None, it's model.inputs. (Default value = 0)
+        maximization: boolean
+            By default enabled. If maximation is disabled the gradients for all channels of the input
+            image are returned.
 
     Example:
         If you wanted to visualize attention over 'bird' category, say output index 22 on the
@@ -151,7 +161,7 @@ def visualize_saliency(model, layer_idx, filter_indices, seed_input, wrt_tensor=
     # for increasing activations. Multiply with -1 so that positive gradients indicate increase instead.
     losses = [(ActivationMaximization(model.layers[layer_idx], filter_indices), -1)]
     return visualize_saliency_with_losses(model.inputs, losses, seed_input, wrt_tensor,
-                                          grad_modifier, input_indices)
+                                          grad_modifier, input_indices, maximization)
 
 
 def visualize_cam_with_losses(input_tensor, losses, seed_input, penultimate_layer, grad_modifier=None, input_indices=0):
