@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import sys
 
 import numpy as np
 from scipy.ndimage.interpolation import zoom
@@ -86,27 +87,35 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
 
     channel_idx = 1 if K.image_data_format() == 'channels_first' else -1
     saliency_maps = []
+    gradients = []
     for i in utils.listify(input_indices):
         if i < len(opt_result):
             _, grads, _ = opt_result[i]
+            gradients.append(grads)
             #support for 1D input
             if len(grads.shape) == 2:
                 grads = utils.normalize(grads)[0]
                 saliency_maps.append(grads)
-            else:
-                if maximization:
-                    grads = np.max(grads, axis=channel_idx)
-                    grads = utils.normalize(grads)[0]
-                else:
-                    grads = utils.normalize(grads)[0]
+            elif maximization:
+                grads = np.max(grads, axis=channel_idx)
+                grads = utils.normalize(grads)[0]
                 saliency_maps.append(grads)
         else:
             raise ValueError('# TODO')
 
+    #if maximization is disabled the saliency values are normalized over both inputs
+    #currently maximization only works with multiple inputs
+    if not maximization:
+        gradients = [grads[0] for grads in gradients]
+        #stack gradients and normalize over all values
+        gradients = np.split(utils.normalize(np.stack(gradients)),len(input_indices),axis=0)
+        #reduce dimension which was created due to stacking the arrays
+        gradients = [np.squeeze(grad,axis=0) for grad in gradients]
+        saliency_maps.extend(gradients)
+
     if isinstance(input_indices, list):
         return saliency_maps
     else:
-        #TODO add support for disabled maximization
         return saliency_maps[input_indices]
 
 
