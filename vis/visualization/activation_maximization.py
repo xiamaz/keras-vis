@@ -41,7 +41,7 @@ def visualize_activation_with_losses(input_tensor, losses, wrt_tensor=None,
     # Default optimizer kwargs.
     optimizer_params = utils.add_defaults_to_kwargs({
         'seed_inputs': seed_input,
-        'max_iter': 200,
+        'max_iter': 2000,
         'verbose': False
     }, **optimizer_params)
 
@@ -54,12 +54,11 @@ def visualize_activation_with_losses(input_tensor, losses, wrt_tensor=None,
             img, _, _ = opt_result[i]
 
             # If range has integer numbers, cast to 'uint8'
-            if isinstance(input_range[0], int) and isinstance(input_range[1], int):
-                img = np.clip(img, input_range[0], input_range[1]).astype('uint8')
-
+            # clipping temoprarly disabled since the input is not actually an image
+            #if isinstance(input_range[0], int) and isinstance(input_range[1], int):
+                #img = np.clip(img, input_range[0], input_range[1]).astype('uint8')
             if K.image_data_format() == 'channels_first':
                 img = np.moveaxis(img, 0, -1)
-
             images.append(img)
         else:
             raise ValueError('# TODO')
@@ -123,8 +122,8 @@ def visualize_activation(model, layer_idx, filter_indices=None, wrt_tensor=None,
 
     losses = [
         (ActivationMaximization(model.layers[layer_idx], filter_indices), act_max_weight),
-        (LPNorm(model.input), lp_norm_weight),
-        (TotalVariation(model.input), tv_weight)
+        (LPNorm(model.input[0]), lp_norm_weight),
+        (TotalVariation(model.input[0]), tv_weight)
     ]
 
     # Add grad_filter to optimizer_params.
