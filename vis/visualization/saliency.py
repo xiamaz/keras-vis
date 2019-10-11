@@ -107,10 +107,12 @@ def visualize_saliency_with_losses(input_tensor, losses, seed_input, wrt_tensor=
     #currently maximization only works with multiple inputs
     if not maximization:
         gradients = [grads[0] for grads in gradients]
+
         #stack gradients and normalize over all values
-        gradients = np.split(utils.normalize(np.stack(gradients)),len(input_indices),axis=0)
-        #reduce dimension which was created due to stacking the arrays
-        gradients = [np.squeeze(grad,axis=0) for grad in gradients]
+        shapes = [g.shape[-1] for g in gradients]
+        splits = [sum(shapes[:i]) for i in range(1, len(shapes))]
+        gradients = np.split(utils.normalize(np.concatenate(gradients, axis=-1)), splits, axis=-1)
+
         saliency_maps.extend(gradients)
 
     if isinstance(input_indices, list):
